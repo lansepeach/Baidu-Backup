@@ -1,139 +1,204 @@
 # Baidu-Backup：高性能百度网盘自动备份与轮替解决方案
 
-**Baidu-Backup** 是一个功能强大、经过实战考验的自动化备份解决方案。它通过一个高度优化的 `Shell` 脚本和 `Python` 引擎协同工作，将您的服务器数据以**高性能并行**的方式，自动备份到百度网盘，并智能地管理历史备份，实现真正的“一劳永逸”。
+Baidu-Backup 是一个功能强大、经过实战考验的自动化备份方案。它通过高度优化的 Shell 脚本与 Python 引擎配合，将您的服务器数据以高性能并行方式备份到云端，并智能管理历史备份。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 🚀 为什么选择 Baidu-Backup？
+## 为什么选择 Baidu-Backup？
 
-我们不仅仅是一个上传脚本，我们是一个**完整的、生产级别的自动化运维解决方案**，专为解决真实世界中的复杂问题而设计：
+- 极致性能，并行上传：分卷并行上传，充分利用带宽，显著缩短备份时间。
+- 流式处理，零中间大文件：tar 与 split 管道化，不占用额外磁盘空间。
+- 智能轮替，空间无忧：自动仅保留最新 N 个备份“组”。
+- 无人值守，长达十年：一次授权，自动刷新 Token，长期稳定运行。
+- 数据校验，可靠可信：双重 MD5 校验，服务器端最终校验。
+- 配置清晰，部署简单：配置集中在 start_backup.sh，Python 引擎免改动。
+- 日志清晰，易于排错：并行模式下依然清晰，适合自动化任务。
 
--   **极致性能，并行上传**: 独创的**并行上传**机制，将大文件切割成多个分卷后同时上传，能榨干您的服务器带宽，将备份时间**成倍缩短**。
--   **流式处理，零硬盘占用**: 采用 `tar` 和 `split` 的**管道流式处理**技术，在压缩和分卷的过程中，**完全不产生巨大的中间文件**，对硬盘空间极其友好。
--   **智能轮替，空间无忧**: 可自定义保留最新的备份“组”（一个完整备份的所有分卷）。脚本会在每次成功上传后，自动删除最旧的备份组，实现完美的备份周期管理。
--   **无人值守，长达十年**: 仅需一次手动授权，脚本即可在长达 **10 年**内自动刷新 `Token`，无需任何人工干预。
--   **数据校验，确保可靠**: Python 引擎内置**双重 MD5 文件完整性自检**，并在上传后由百度服务器进行最终校验，确保您备份的每一个字节都准确无误。
--   **清晰架构，易于配置**: 采用**配置与引擎分离**的专业架构。您只需要修改 `start_backup.sh` 这一个文件，即可完成所有配置，Python 脚本无需任何改动。
--   **高容错性**: 针对备份“动态目录”（如运行中的网站或游戏服务器）的场景，脚本内置了多种容错机制，确保在源文件频繁变化时，依然能最大限度地成功创建备份。
--   **日志清晰，易于排错**: 专为自动化任务设计的日志系统，在并行模式下也能保持清晰可读。若无事，则静默；若有错，则详尽。
+## 支持与规划
 
-## ⚙️ 架构简介
+- 已支持后端：百度网盘（Baidu Netdisk）
+- 规划/预备：123pan（123 云盘）。本文档包含 123pan 凭证准备指南，便于后续切换或扩展。
 
-Baidu-Backup 由两个核心组件构成，各司其职：
+## 架构概览
 
-1.  **`start_backup.sh` (总指挥 & 配置文件)**
-    -   **职责**: 负责所有**本地操作**和**参数配置**。
-    -   **工作流**: 流式压缩 -> 动态分卷 -> **并行调度** Python 引擎。
-    -   **您需要修改的唯一文件！**
+- start_backup.sh（总指挥与配置）
+  - 本地打包（流式）→ 分卷 → 并行调度上传引擎
+  - 您主要修改的文件
+- Baidu-Backup.py（上传引擎）
+  - 云端操作：鉴权、分片上传、合并、备份轮替
+  - 读取环境变量 BAIDU_APP_KEY、BAIDU_SECRET_KEY
 
-2.  **`111.py` (上传引擎)**
-    -   **职责**: 负责所有**云端操作**。
-    -   **工作流**: 接收 Shell 脚本传递的参数 -> 本地文件自检 -> 上传分卷 -> 智能轮替云端备份。
-    -   **一个完全无需修改的“黑盒工具”。**
+## 快速上手
 
-## 📖 快速上手指南
+### 第 1 步：准备云盘应用凭证
 
-### 第 1 步：获取百度开放平台凭证
+- 百度网盘（已支持）
+  1. 访问 https://pan.baidu.com/union/console 并登录。
+  2. 完成开发者认证，创建“个人应用-存储”类型应用。
+  3. 记录 AppKey 与 SecretKey。
+  4. 运行时以环境变量提供：
+     - BAIDU_APP_KEY
+     - BAIDU_SECRET_KEY
 
-1.  访问 [百度网盘开放平台](https://pan.baidu.com/union/console) 并登录。
-2.  完成开发者认证，然后创建一个“个人应用-存储”类型的应用。
-3.  在应用详情页，记下您的 **`AppKey`** 和 **`SecretKey`**。
+- 123pan（规划/预备）
+  1. 访问 123pan 开放平台（请根据官方文档与入口操作）。
+  2. 注册开发者并创建应用，获取 Client ID/Secret。
+  3. 建议预留环境变量（当前版本未使用）：
+     - PAN123_CLIENT_ID
+     - PAN123_CLIENT_SECRET
 
 ### 第 2 步：部署项目
 
-1.  克隆本仓库到您的服务器：
-    ```bash
-    git clone https://github.com/lansepeach/Baidu-Backup.git
-    cd Baidu-Backup
-    ```
-2.  从官网下载 [Python SDK](https://pan.baidu.com/union/doc/Kl4gsu388)，解压后将 `openapi_client` 文件夹整个复制到 `Baidu-Backup` 项目目录下。
-3.  安装依赖：
-    ```bash
-    pip install requests
-    ```
+1. 克隆仓库
+   git clone https://github.com/lansepeach/Baidu-Backup.git
+   cd Baidu-Backup
 
-### 第 3 步：配置 `start_backup.sh`
+2. 准备 SDK（按百度官方指引）
+   从百度开放平台下载 Python SDK（openapi_client），解压后将 openapi_client 文件夹复制到 Baidu-Backup 目录。
 
-打开 `start_backup.sh` 文件，这是您唯一需要修改的文件。请根据注释，填写您的信息。
+3. 安装依赖
+   pip install -r requirements.txt
 
-```bash
-#!/bin/bash
+### 第 3 步：配置 start_backup.sh
 
-# --- 请在这里配置您的所有信息 ---
-# 1. 百度开放平台凭证
-export BAIDU_APP_KEY="你的AppKey"
-export BAIDU_SECRET_KEY="你的SecretKey"
+打开 start_backup.sh 并按注释修改：
 
-# 2. 本地备份源目录
-LIVE_DATA_DIR="/path/to/your/data/to/backup"
+- 必填环境变量（用于 Python 引擎鉴权）
+  - export BAIDU_APP_KEY="你的AppKey"
+  - export BAIDU_SECRET_KEY="你的SecretKey"
+- 关键参数
+  - LIVE_DATA_DIR：需要备份的本地目录（例如 /opt）
+  - REMOTE_DIR：云端备份目录（百度需以 /apps/ 开头）
+  - MAX_BACKUPS：仅保留最近 N 个备份组（0 表示不清理）
+  - SPLIT_SIZE：分卷大小（推荐 1G）
+  - PARALLEL_UPLOADS：并行上传任务数（建议 2~3 起步）
+  - PYTHON_EXECUTABLE：Python 解释器路径
+  - BACKUP_SCRIPT_PATH：Baidu-Backup.py 的绝对路径
 
-# 3. 云端备份目标目录
-REMOTE_DIR="/apps/你的应用名称/server_backups"
+示例配置可参考仓库根目录的 config.example.yaml（用于映射与记录，不会被程序直接读取）。
 
-# 4. 最大保留的备份组数量 (设置为 0 则保留所有)
-MAX_BACKUPS=7 # 例如，只保留最近7天的备份
+### 第 4 步：首次授权与运行
 
-# 5. 分卷大小 (1G 是一个非常推荐的稳健值)
-SPLIT_SIZE="1G"
+1. 赋予执行权限
+   chmod +x start_backup.sh
 
-# 6. (🚀) 并行上传任务数 (建议从 2 或 3 开始)
-PARALLEL_UPLOADS=3
+2. 首次运行（交互式授权）
+   ./start_backup.sh
+   根据提示在浏览器打开授权链接，完成登录授权后粘贴 code。成功后会生成 baidu_token.json，后续将自动刷新。
 
-# 7. Python 解释器和脚本的绝对路径 (请确认为您服务器上的真实路径)
-PYTHON_EXECUTABLE="/usr/bin/python3"
-BACKUP_SCRIPT_PATH="/path/to/your/Baidu-Backup/Baidu-Backup.py"
-# --- 配置结束 ---
-```
+3. 后续运行（全自动）
+   再次执行 ./start_backup.sh 即可静默运行。
 
-### 第 4 步：授权与运行
+### 第 5 步：自动化运行
 
-1.  **授予执行权限**:
-    ```bash
-    chmod +x start_backup.sh
-    ```
+- 使用 cron
+  参考 scripts/cron_example.txt，将任务设为每日 03:00 执行并写日志。
 
-2.  **首次运行 (交互式授权)**:
-    直接在终端中执行：
-    ```bash
-    ./start_backup.sh
-    ```
-    脚本会检测到 `baidu_token.json` 文件不存在，并自动进入授权流程。请根据 Python 脚本的提示，在浏览器中打开 URL，完成授权，然后将 `code` 码粘贴回终端。
-    
-    授权成功后，备份任务将自动开始。
+- 使用 systemd（推荐）
+  1) 安装示例单元
+     sudo cp scripts/systemd/baidu-backup.service /etc/systemd/system/
+     sudo cp scripts/systemd/baidu-backup.timer /etc/systemd/system/
+  
+  2) 可选：环境文件（存放密钥等）
+     sudo cp scripts/systemd/baidu-backup.env.example /etc/default/baidu-backup
+     sudo chmod 600 /etc/default/baidu-backup
+  
+  3) 启用并启动定时器
+     sudo systemctl daemon-reload
+     sudo systemctl enable --now baidu-backup.timer
+  
+  4) 查看状态与日志
+     systemctl status baidu-backup.service
+     journalctl -u baidu-backup.service --no-pager -n 200
 
-3.  **后续运行 (全自动)**:
-    再次运行 `./start_backup.sh` 时，脚本将全自动静默运行，无需任何交互。
+## 配置指南（要点与环境变量映射）
 
-### 第 5 步：设置定时任务 (Cron Job)
+- BAIDU_APP_KEY / BAIDU_SECRET_KEY：百度开放平台凭证（必需）
+- LIVE_DATA_DIR：备份源目录（绝对路径）
+- REMOTE_DIR：云端备份目录；百度需以 /apps/<应用名> 开头
+- MAX_BACKUPS：仅保留最近 N 个备份“组”；按组删除所有分卷
+- SPLIT_SIZE：分卷大小，单位如 1G、512M
+- PARALLEL_UPLOADS：并行上传任务数（xargs -P）
+- PYTHON_EXECUTABLE：Python 解释器路径
+- BACKUP_SCRIPT_PATH：Baidu-Backup.py 的绝对路径
 
-将您的备份任务自动化，例如，设置每天凌晨3点执行：
+说明：当前版本程序不直接读取 YAML；config.example.yaml 仅作为“配置清单与环境映射”示例，便于生成 /etc/default/baidu-backup 或对照 start_backup.sh。
 
-```bash
-# 编辑 crontab
-crontab -e
+## 加密备份（可选）
 
-# 添加以下一行 (请确保使用 start_backup.sh 的绝对路径)
-0 3 * * * /path/to/your/Baidu-Backup/start_backup.sh >> /var/log/baidu_backup.log 2>&1
-```
+出于安全考虑，您可以在管道中插入对称加密步骤。推荐两种方式：
+
+- OpenSSL（AES-256-CTR）
+  将 start_backup.sh 中 tar → split 的管道替换为：
+  tar --ignore-failed-read -czf - -C "$(dirname "$LIVE_DATA_DIR")" "$(basename "$LIVE_DATA_DIR")" \
+  | openssl enc -aes-256-ctr -pbkdf2 -salt -pass env:BACKUP_PASSWORD \
+  | split -b "$SPLIT_SIZE" -d - "$SPLIT_DIR/$TAR_FILENAME_BASE."
+
+  恢复解密：
+  cat your_backup.tar.gz.* | openssl enc -d -aes-256-ctr -pbkdf2 -pass env:BACKUP_PASSWORD | tar -xz -C /restore/path
+
+- GPG（对称加密）
+  tar --ignore-failed-read -czf - -C "$(dirname "$LIVE_DATA_DIR")" "$(basename "$LIVE_DATA_DIR")" \
+  | gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$BACKUP_PASSWORD" \
+  | split -b "$SPLIT_SIZE" -d - "$SPLIT_DIR/$TAR_FILENAME_BASE."
+
+  恢复解密：
+  cat your_backup.tar.gz.* | gpg --batch --yes --decrypt --passphrase "$BACKUP_PASSWORD" | tar -xz -C /restore/path
+
+请将 BACKUP_PASSWORD 放入安全的环境文件（如 /etc/default/baidu-backup），并限制权限（600）。
+
+## 监控与退出码
+
+- 成功：start_backup.sh 最终返回 0，Python 引擎返回 0
+- 失败：任何阶段出现致命错误返回非 0（通常为 1）
+- systemd 监控：
+  - Restart=on-failure（如需）
+  - journalctl -u baidu-backup.service 查看日志
+- cron 监控：
+  - 将输出重定向到日志文件并由外部监控采集
+  - 或使用 MAILTO 接收失败通知
+
+## 常见问题排查（Troubleshooting）
+
+- 首次授权失败 / 无法获取 token
+  - 确认已设置 BAIDU_APP_KEY/BAIDU_SECRET_KEY
+  - 按提示在浏览器打开授权 URL，粘贴 code
+  - 删除损坏的 baidu_token.json 后重试
+
+- ImportError: 无法导入 openapi_client
+  - 请按 README 指引下载 SDK 并将 openapi_client 目录置于项目根目录
+
+- 远程目录无效
+  - 对于百度，REMOTE_DIR 必须以 /apps/ 开头
+
+- 并行上传失败或偶发网络错误
+  - 程序会自动重试分片；可适当降低 PARALLEL_UPLOADS
+
+- 本地文件不一致错误（双 MD5 校验未通过）
+  - 可能为底层存储或文件被改写，请先确保源目录稳定
+
+- Streaming process failed. No volumes were created.
+  - 检查 LIVE_DATA_DIR 是否存在、权限足够、磁盘空间是否充足
 
 ## 恢复备份
 
-1.  将属于同一个备份批次的所有分卷文件（例如 `..._20250917-030000.tar.gz.00`, `...01`, `...02`）下载到同一个目录。
-2.  使用 `cat` 命令将它们合并成一个完整的压缩包：
-    ```bash
-    cat your_backup_timestamp.tar.gz.* > complete_backup.tar.gz
-    ```
-3.  解压即可：
-    ```bash
-    tar -xzf complete_backup.tar.gz
-    ```
+1. 下载同一批次的所有分卷（例如 .00、.01、.02 ...）到同一目录
+2. 合并并解压：
+   cat your_backup_timestamp.tar.gz.* > complete_backup.tar.gz
+   tar -xzf complete_backup.tar.gz
 
-## 🤝 贡献
+若启用了加密，请先按上文“加密备份（可选）”中的解密命令合并解密，再解压。
 
-如果您有任何问题或改进建议，欢迎提交 [Issues](https://github.com/lansepeach/Baidu-Backup/issues) 或 Pull Requests。如果这个项目对您有帮助，请不要吝啬您的 **Star** ⭐！
+## 发布说明
 
-## 📄 许可证
+请查看 CHANGELOG.md 获取 v0.1.0 的发布摘要。
 
-本项目采用 [MIT License](LICENSE) 授权。
+## 贡献
+
+欢迎提交 Issues 或 Pull Requests。如果这个项目对您有帮助，欢迎 Star ⭐！
+
+## 许可证
+
+本项目采用 MIT License 授权。

@@ -1,0 +1,8 @@
+# Example crontab entries to run Baidu-Backup daily at 03:00
+#
+# Option A: Minimal (configure everything inside start_backup.sh)
+0 3 * * * /opt/Baidu-Backup/start_backup.sh >> /var/log/baidu-backup.log 2>&1
+
+# Option B: Load secrets from an environment file, then run
+# Note: cron uses /bin/sh by default; use bash to source the env file
+0 3 * * * /usr/bin/env bash -c 'source /etc/default/baidu-backup && /opt/Baidu-Backup/start_backup.sh' >> /var/log/baidu-backup.log 2>&1
