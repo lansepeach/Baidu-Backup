@@ -1,0 +1,10 @@
+[Unit]
+Description=Baidu-Backup daily timer (03:00)
+
+[Timer]
+OnCalendar=03:00
+Persistent=true
+Unit=baidu-backup.service
+
+[Install]
+WantedBy=timers.target

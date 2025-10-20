@@ -1,0 +1,61 @@
+# Baidu-Backup configuration example
+#
+# This file is a reference only. The current implementation reads configuration
+# from start_backup.sh and environment variables. Use this file to document and
+# template your desired settings, or to generate an /etc/default/baidu-backup
+# environment file for systemd/cron usage.
+#
+# Environment variable mappings are shown using ${ENV_VAR} placeholders.
+
+# Select backend. Currently supported: baidu
+# Planned/experimental: 123pan
+backend: baidu  # or: 123pan
+
+baidu:
+  # Mapped to environment variables used by Baidu-Backup.py
+  app_key: "${BAIDU_APP_KEY}"
+  secret_key: "${BAIDU_SECRET_KEY}"
+
+# Placeholder for future/experimental backend
+# If you plan to use 123pan in the future, prepare client credentials here.
+# Not used by current code.
+123pan:
+  client_id: "${PAN123_CLIENT_ID:-}"
+  client_secret: "${PAN123_CLIENT_SECRET:-}"
+
+backup:
+  # Absolute path to the directory that will be archived and uploaded
+  live_data_dir: "/opt"
+  
+  # Remote directory in the cloud backend where backups will be stored
+  # For Baidu Netdisk, it must begin with /apps/<your-app-name>
+  remote_dir: "/apps/你的应用名称/server_backups"
+
+  # Retention policy: keep only this many newest backup sets
+  # 0 means keep all
+  max_backups: 7
+
+  # Split size for streaming volumes
+  # Recommended stable value: 1G
+  split_size: "1G"
+
+  # Max parallel uploads (xargs -P)
+  # Start with 2-3. Increase carefully based on CPU/bandwidth
+  parallel_uploads: 3
+
+runtime:
+  # Python interpreter and script path on your system
+  python_executable: "/usr/bin/python3"
+  backup_script_path: "/path/to/your/Baidu-Backup/Baidu-Backup.py"
+
+# Optional client-side encryption guidance (implemented in the shell pipeline)
+encryption:
+  enabled: false
+  # mode: openssl-aes-256-ctr | gpg-symmetric (documentation-only)
+  mode: "openssl-aes-256-ctr"
+  # Passphrase is taken from an environment variable when enabled
+  passphrase_env: "BACKUP_PASSWORD"
+  notes: |
+    If enabled, modify the streaming pipeline in start_backup.sh to insert
+    an encryption step between tar and split. See README for exact examples
+    using openssl or gpg.

@@ -1,0 +1,22 @@
+[Unit]
+Description=Baidu-Backup: Streamed, parallel backup to Baidu Netdisk
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/opt/Baidu-Backup/start_backup.sh
+
+[Service]
+Type=oneshot
+# Optional environment file for secrets and overrides
+EnvironmentFile=-/etc/default/baidu-backup
+WorkingDirectory=/opt/Baidu-Backup
+ExecStart=/bin/bash -lc '/opt/Baidu-Backup/start_backup.sh'
+# Nice-to-have hardening and scheduling hints
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+# Log to journal; view with: journalctl -u baidu-backup.service
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
