@@ -51,7 +51,7 @@ Baidu-Backup 由两个核心组件构成，各司其职：
 2.  从官网下载 [Python SDK](https://pan.baidu.com/union/doc/Kl4gsu388)，解压后将 `openapi_client` 文件夹整个复制到 `Baidu-Backup` 项目目录下。
 3.  安装依赖：
     ```bash
-    pip install requests
+    sudo apt install python3-requests
     ```
 
 ### 第 3 步：配置 `start_backup.sh`
